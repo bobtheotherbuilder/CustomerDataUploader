@@ -2,20 +2,23 @@
 
 <script src="~/Scripts/jquery-1.10.2.min.js"></script>
 <script type="text/javascript">
-    //var fileSelected = false;
-
     $(document).ready(
 
-        //function () {
-        //    $('#fileName').change(
-        //        function () {
-        //            //$('#submitFile').removeAttr("disabled");
-        //            fileSelected = true;
-        //        }
-        //    );
-        //}
-
+        function () {
+            $('#fileName').change(
+                function () {
+                    $('#submitFile').removeClass("hidden");
+                    $('#selectedFile').text($('#fileName').val());
+                    $('#ratio').text("");
+                }
+            );
+        }
     );
+
+    var process = function () {
+        $('#submitFile').addClass("hidden");
+        $('#loader').modal();
+    }
 
 </script>
 
@@ -23,18 +26,31 @@
     ViewBag.Title = "UploadFile";
 }
 
-<h2>UploadFile</h2>
-<div ng-controller="UploadController">
-    @using (Html.BeginForm("UploadFile", "Home", FormMethod.Post, new { enctype = "multipart/form-data", id = "fileForm" }))
+<h2>Upload Customer Data</h2>
+<div class="modal hide" id="loader" data-backdrop="static" data-keyboard="false">
+
+</div>
+
+<div>
+    @using (Html.BeginForm("UploadFileAsync", "Home", FormMethod.Post, new { enctype = "multipart/form-data", id = "fileForm", onsubmit= "process()" }))
     {
-        <input type="file" id="fileName" name="fileName" ng-change="fileChosen"/>
-        <div ng-model="status">
-                <text id="totalCount">{{status.total}} records</text>
-            </div>
-        <input type="submit" id="submitFile" class="btn-success" value="Start Upload"
-               ng-show="{{status.fileSelected}}" />
+        <input type="file" id="fileName" name="fileName" style="width: 95px" /><p id="selectedFile">@Model.fileName</p>
+        <input type="submit" id="submitFile" class="btn-success hidden" value="Start Upload" />
     }
-    <span ng-show="@(Model.customers != null)" >
-        @Model.successCount / {{status.total}}
-    </span>
+    
+    <div id="result">
+        <p id="ratio">Success Rate:    @Model.successCount / @Model.total</p>
+        @if (Model.total > 0)
+        {
+            foreach (var cm in Model.customers.Where(c=>c.UploadErrors != null))
+            {
+                <p>@cm.CustomerData.customer : @cm.UploadErrors[0])</p>
+            }
+            @*foreach (var cm in Model.customers)
+            {
+                <p>@cm.Hash.Substring(32)</p>
+            }*@
+        }
+    </div>
+
 </div>

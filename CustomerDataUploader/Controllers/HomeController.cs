@@ -27,6 +27,73 @@ namespace CustomerDataUploader.Controllers
             return View(vm);
         }
 
+        [HttpPost]
+        public async Task<ActionResult> UploadFileAsync(FormCollection formCollection)
+        {
+            if (Request == null)
+            {
+                ViewBag.ErrorMessage = "Invalid request.";
+                return View("Error");
+            }
+
+            HttpPostedFileBase file = Request.Files["fileName"];
+            if ((file == null) || (file.ContentLength == 0) || string.IsNullOrEmpty(file.FileName))
+            {
+                ViewBag.ErrorMessage = "Please choose a valid csv file.";
+                return View("Error");
+            }
+
+            List<CustomerData> customers = ParseFile(file);
+            int successCout = 0;
+            HttpClient client = new HttpClient();
+            List<CustomerInfo> updatedCustomers = new List<CustomerInfo>();
+
+            var tasks = customers.Select(async cust =>
+            {
+                CustomerInfo custInfo = new CustomerInfo(cust);
+                bool successUpload = await postCustLineData(custInfo, client);
+
+                if (successUpload)
+                {
+                    {
+                        updatedCustomers.Add(custInfo);
+                        successCout += 1;
+                    }
+                }
+            });
+            await Task.WhenAll(tasks);
+
+            client.Dispose();
+            UploadFileViewModel vm = new UploadFileViewModel()
+                { customers = updatedCustomers, total = customers.Count, successCount = successCout, fileName =file.FileName };
+            return View("UploadFile", vm);
+        }
+
+
+        public ActionResult SearchData(string info)
+        {
+            ViewBag.Customer = info;
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> SearchDataAsync(string searchHash)
+        {
+            HttpClient client = new HttpClient();
+            HttpResponseMessage response = await client.GetAsync($"{SERVICEURL}check?hash={searchHash}");
+            if (response.IsSuccessStatusCode)
+            {
+                dynamic result = JsonConvert.DeserializeObject(response.Content.ReadAsStringAsync().Result);
+                ViewBag.Info = result.customer;
+            }
+            else
+            {
+                ViewBag.Info = "Hash not found";
+            }
+
+            return View("SearchData");
+        }
+
         private List<CustomerData> ParseFile(HttpPostedFileBase file)
         {
             List<CustomerData> customers = new List<CustomerData>();
@@ -48,69 +115,28 @@ namespace CustomerDataUploader.Controllers
             return customers;
         }
 
-
-        [HttpPost]
-        public ActionResult UploadFile(FormCollection formCollection)
+        private async Task<bool> postCustLineData(CustomerInfo custInfo, HttpClient client)
         {
-            if (Request == null)
-            {
-                ViewBag.ErrorMessage = "Invalid request.";
-                return View("Error");
-            }
-
-            HttpPostedFileBase file = Request.Files["fileName"];
-            if ((file == null) || (file.ContentLength == 0) || string.IsNullOrEmpty(file.FileName))
-            {
-                ViewBag.ErrorMessage = "Please choose a valid csv file.";
-                return View("Error");
-            }
-
-            List<CustomerData> customers = ParseFile(file);
-            int successCout = 0;
-            HttpClient client = new HttpClient();
-            List<CustomerInfo> updatedCustomers = new List<CustomerInfo>();
-            Parallel.ForEach(customers, cust =>
-            {
-                CustomerInfo custInfo = postCustDataAsync(cust, client).Result;
-                if (custInfo != null)
-                {
-                    updatedCustomers.Add(custInfo);
-                    if (custInfo.Hash != null) {
-                        successCout += 1;
-                    }                    
-                }
-            });
-
-            client.Dispose();
-            //ViewBag.Total = customers.Count;
-            //ViewBag.Success = successCout;
-
-            return View(new UploadFileViewModel()
-            { customers = updatedCustomers, successCount=successCout });
-        }
-
-        private async Task<CustomerInfo> postCustDataAsync(CustomerData cust, HttpClient client)
-        {
-            string postBody = JsonConvert.SerializeObject(cust);
+            string postBody = JsonConvert.SerializeObject(custInfo.CustomerData);
             var content = new StringContent(postBody, Encoding.UTF8, "application/json");
-            CustomerInfo custInfo = new CustomerInfo(cust);
-            // + "upload"
-            HttpResponseMessage response = await client.PostAsync(new Uri(SERVICEURL+"upload"), content);
+            
+            HttpResponseMessage response = await client.PostAsync(new Uri(SERVICEURL + "upload"), content);
             if (response.IsSuccessStatusCode)
-            {
+            {                
+                Console.WriteLine(custInfo.CustomerData.customer);
                 dynamic result = JsonConvert.DeserializeObject(response.Content.ReadAsStringAsync().Result);
                 string added = result.added;
                 if (!string.IsNullOrEmpty(added) && Boolean.Parse(added))
                 {
                     custInfo.Hash = result.hash;
+                    return true;
                 }
-                else {
+                else
+                {
                     custInfo.UploadErrors = new List<string>(result.errors);
                 }
-                return custInfo;
             }
-            return null;
+            return false;
         }
-
     }
 }

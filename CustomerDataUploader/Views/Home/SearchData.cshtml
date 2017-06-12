@@ -1,0 +1,24 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Search Customer Data</title>
+</head>
+<body>
+    <h2>Search with hash</h2>
+
+    @using (Html.BeginForm("SearchDataAsync", "Home", FormMethod.Post))
+    {
+        <input name="searchHash" type="text" style="width: 250px" placeholder="Enter hash here for matching customer" />
+        <br />
+        <input type="submit" value="Start Search" />
+    }
+
+    <p>@ViewBag.Info</p>
+</body>
+</html>
