@@ -70,9 +70,8 @@ namespace CustomerDataUploader.Controllers
         }
 
 
-        public ActionResult SearchData(string info)
+        public ActionResult SearchData()
         {
-            ViewBag.Customer = info;
             return View();
         }
 
@@ -84,7 +83,7 @@ namespace CustomerDataUploader.Controllers
             if (response.IsSuccessStatusCode)
             {
                 dynamic result = JsonConvert.DeserializeObject(response.Content.ReadAsStringAsync().Result);
-                ViewBag.Info = result.customer;
+                ViewBag.Info = $"Found Customer: {result.customer}";
             }
             else
             {
