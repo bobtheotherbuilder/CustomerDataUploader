@@ -8,6 +8,5 @@ Original requirements:
 6. Store the status of the upload and the hash received from the API in the database
 7. Provide a page to search for records that have been uploaded and view the result
 8. Upload your code to a git repository (github / bitbucket)
-9. Email Peter Willmott a link to the repo (and provide access if not public)
 
 Due to time constraints, omitted DB interaction and testing...
