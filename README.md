@@ -11,4 +11,4 @@ Original requirements:
 
 Due to time constraints, omitted DB interaction and testing...
 Now used to test webhook
-Added Parse Json action
+Added Parse Json action with Body param
